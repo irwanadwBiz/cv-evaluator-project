@@ -24,7 +24,11 @@ function cosine(a, b) {
 }
 function hashEmbedding(text, dim = 256) {
     const vec = new Array(dim).fill(0);
-    const toks = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+    const toks = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean);
     for (const t of toks) {
         let h = 2166136261;
         for (let i = 0; i < t.length; i++) {
@@ -36,7 +40,7 @@ function hashEmbedding(text, dim = 256) {
         vec[idx] += 1;
     }
     const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
-    return vec.map(v => v / norm);
+    return vec.map((v) => v / norm);
 }
 let RagService = class RagService {
     constructor(prisma) {
@@ -45,12 +49,17 @@ let RagService = class RagService {
     async retrieve(query, topK = 2) {
         const q = hashEmbedding(query);
         const docs = await this.prisma.vectorDoc.findMany();
-        const scored = docs.map(d => ({
+        const scored = docs.map((d) => ({
             doc: d,
             score: cosine(q, d.embedding || []),
         }));
         scored.sort((a, b) => b.score - a.score);
-        return scored.slice(0, topK).map(s => ({ kind: s.doc.kind, title: s.doc.title, content: s.doc.content, score: s.score }));
+        return scored.slice(0, topK).map((s) => ({
+            kind: s.doc.kind,
+            title: s.doc.title,
+            content: s.doc.content,
+            score: s.score,
+        }));
     }
 };
 exports.RagService = RagService;

@@ -13,6 +13,7 @@ const jobs_controller_1 = require("./jobs.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
 const pipeline_module_1 = require("../pipeline/pipeline.module");
 const jobs_result_controller_1 = require("./jobs.result.controller");
+const rag_service_1 = require("../pipeline/rag.service");
 let JobsModule = class JobsModule {
 };
 exports.JobsModule = JobsModule;
@@ -20,7 +21,7 @@ exports.JobsModule = JobsModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule, pipeline_module_1.PipelineModule],
         controllers: [jobs_controller_1.JobsController, jobs_result_controller_1.JobsResultController],
-        providers: [jobs_service_1.JobsService],
+        providers: [jobs_service_1.JobsService, rag_service_1.RagService],
         exports: [jobs_service_1.JobsService],
     })
 ], JobsModule);

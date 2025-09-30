@@ -1,7 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PrismaService } from '@/prisma/prisma.service';
-import { JobStatus } from '@prisma/client';
-import { PipelineService } from '@/pipeline/pipeline.service';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { PrismaService } from "@/prisma/prisma.service";
+import { JobStatus } from "@prisma/client";
+import { PipelineService } from "@/pipeline/pipeline.service";
+import { RagService } from "@/pipeline/rag.service";
 
 @Injectable()
 export class JobsService implements OnModuleInit {
@@ -9,13 +10,18 @@ export class JobsService implements OnModuleInit {
   private loopHandle: NodeJS.Timeout | null = null;
   private running = false;
 
-  constructor(private prisma: PrismaService, private pipeline: PipelineService) {}
+  constructor(
+    private prisma: PrismaService,
+    private pipeline: PipelineService,
+    private rag: RagService
+  ) {}
 
   async onModuleInit() {
     // Ensure uploads dir exists
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const fs = require('fs');
-    if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads', { recursive: true });
+    const fs = require("fs");
+    if (!fs.existsSync("./uploads"))
+      fs.mkdirSync("./uploads", { recursive: true });
     // Start background loop
     this.startLoop();
   }
@@ -26,12 +32,14 @@ export class JobsService implements OnModuleInit {
       if (this.running) return;
       this.running = true;
       try {
-        const job = await this.prisma.job.findFirst({ where: { status: JobStatus.queued } });
+        const job = await this.prisma.job.findFirst({
+          where: { status: JobStatus.queued },
+        });
         if (job) {
           await this.process(job.id);
         }
       } catch (e) {
-        this.logger.error('Loop error', e as any);
+        this.logger.error("Loop error", e as any);
       } finally {
         this.running = false;
         this.loopHandle = setTimeout(tick, 1000);
@@ -42,7 +50,7 @@ export class JobsService implements OnModuleInit {
 
   async enqueue(cvId: string, reportId: string, temperature = 0.2) {
     const job = await this.prisma.job.create({
-      data: { cvId, reportId, temperature, status: JobStatus.queued }
+      data: { cvId, reportId, temperature, status: JobStatus.queued },
     });
     return job;
   }
@@ -53,22 +61,56 @@ export class JobsService implements OnModuleInit {
 
   private async process(id: string) {
     this.logger.log(`Processing job ${id}`);
-    let job = await this.prisma.job.update({ where: { id }, data: { status: JobStatus.processing } });
+    let job = await this.prisma.job.update({
+      where: { id },
+      data: { status: JobStatus.processing },
+    });
+
     try {
-      // Simulate long-running (1-2s)
-      await new Promise(res => setTimeout(res, 1000 + Math.random() * 1000));
-      const result = await this.pipeline.run(job.cvId, job.reportId, job.temperature);
-      job = await this.prisma.job.update({ where: { id }, data: { status: JobStatus.completed, result } });
+      // Retrieve context (job description + rubric)
+      const cvContext = await this.rag.retrieve("cv scoring rubric", 1);
+      const projectContext = await this.rag.retrieve(
+        "project scoring rubric",
+        1
+      );
+
+      // Simulate long-running
+      await new Promise((res) => setTimeout(res, 1000 + Math.random() * 1000));
+
+      // Pass context ke pipeline
+      const result = await this.pipeline.run(
+        job.cvId,
+        job.reportId,
+        job.temperature,
+        {
+          cvContext: cvContext.map((c) => c.content).join("\n"),
+          projectContext: projectContext.map((c) => c.content).join("\n"),
+        }
+      );
+
+      job = await this.prisma.job.update({
+        where: { id },
+        data: { status: JobStatus.completed, result },
+      });
+
       this.logger.log(`Completed job ${id}`);
     } catch (e) {
-      const retries = job.retries + 1;
+      const retries = (job.retries ?? 0) + 1;
       const max = Number(process.env.MAX_RETRIES ?? 3);
-      const errMsg = (e as Error).message || 'unknown error';
+      const errMsg = (e as Error).message || "unknown error";
       if (retries <= max) {
-        await this.prisma.job.update({ where: { id }, data: { retries, status: JobStatus.queued, error: errMsg } });
-        this.logger.warn(`Job ${id} failed attempt ${retries}, re-queued: ${errMsg}`);
+        await this.prisma.job.update({
+          where: { id },
+          data: { retries, status: JobStatus.queued, error: errMsg },
+        });
+        this.logger.warn(
+          `Job ${id} failed attempt ${retries}, re-queued: ${errMsg}`
+        );
       } else {
-        await this.prisma.job.update({ where: { id }, data: { retries, status: JobStatus.failed, error: errMsg } });
+        await this.prisma.job.update({
+          where: { id },
+          data: { retries, status: JobStatus.failed, error: errMsg },
+        });
         this.logger.error(`Job ${id} failed permanently: ${errMsg}`);
       }
     }

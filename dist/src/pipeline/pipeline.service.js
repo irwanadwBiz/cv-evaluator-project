@@ -21,22 +21,43 @@ let PipelineService = class PipelineService {
         this.rag = rag;
         this.llm = llm;
     }
-    async run(cvId, reportId, temperature = 0.2) {
+    async run(cvId, reportId, temperature, context) {
         const [cvText, reportText] = await Promise.all([
             this.files.getUploadText(cvId),
             this.files.getUploadText(reportId),
         ]);
-        const [jobCtx] = await this.rag.retrieve('backend product engineer job description');
-        const [rubricCtx] = await this.rag.retrieve('scoring rubric for CV and project');
-        const extracted = await this.llm.extractFromCV(cvText || '');
-        const { analysis, skillOverlap } = await this.llm.compareToJob(extracted, jobCtx?.content || '');
+        const jobCtx = context?.cvContext || "";
+        const rubricCtx = context?.projectContext || "";
+        const extracted = await this.llm.extractFromCV(cvText || "");
+        const { analysis, skillOverlap } = await this.llm.compareToJob(extracted, jobCtx);
         const techMatch = (0, scoring_1.clamp15)(Math.max(1, Math.min(5, 2 + Math.round(skillOverlap.length / 2))));
-        const exp = (0, scoring_1.clamp15)(extracted.years >= 5 ? 5 : extracted.years >= 3 ? 4 : extracted.years >= 2 ? 3 : extracted.years >= 1 ? 2 : 1);
-        const ach = (0, scoring_1.clamp15)((extracted.achievements?.length || 0) >= 3 ? 4 : (extracted.achievements?.length || 0) >= 1 ? 3 : 2);
-        const culture = (0, scoring_1.clamp15)((extracted.softSkills?.length || 0) >= 3 ? 4 : (extracted.softSkills?.length || 0) >= 1 ? 3 : 2);
-        const cvScores = { technicalMatch: techMatch, experience: exp, achievements: ach, culture };
+        const exp = (0, scoring_1.clamp15)(extracted.years >= 5
+            ? 5
+            : extracted.years >= 3
+                ? 4
+                : extracted.years >= 2
+                    ? 3
+                    : extracted.years >= 1
+                        ? 2
+                        : 1);
+        const ach = (0, scoring_1.clamp15)((extracted.achievements?.length || 0) >= 3
+            ? 4
+            : (extracted.achievements?.length || 0) >= 1
+                ? 3
+                : 2);
+        const culture = (0, scoring_1.clamp15)((extracted.softSkills?.length || 0) >= 3
+            ? 4
+            : (extracted.softSkills?.length || 0) >= 1
+                ? 3
+                : 2);
+        const cvScores = {
+            technicalMatch: techMatch,
+            experience: exp,
+            achievements: ach,
+            culture,
+        };
         const cvAgg = (0, scoring_1.aggregateCV)(cvScores);
-        const projEval = await this.llm.evaluateProject(reportText || '', rubricCtx?.content || '');
+        const projEval = await this.llm.evaluateProject(reportText || "", rubricCtx);
         const projScores = {
             correctness: projEval.scores.correctness,
             codeQuality: projEval.scores.codeQuality,
@@ -46,10 +67,10 @@ let PipelineService = class PipelineService {
         };
         const projAgg = (0, scoring_1.aggregateProject)(projScores);
         const summary = [
-            `CV match is ${cvAgg.percentage.toFixed(1)}%. Strong overlaps: ${skillOverlap.slice(0, 5).join(', ') || 'none obvious'}.`,
+            `CV match is ${cvAgg.percentage.toFixed(1)}%. Strong overlaps: ${skillOverlap.slice(0, 5).join(", ") || "none obvious"}.`,
             `Project scoring indicates correctness=${projScores.correctness}, quality=${projScores.codeQuality}, resilience=${projScores.resilience}.`,
-            ...(projEval.feedback.slice(0, 2)),
-            `Recommendation: focus on ${skillOverlap.length < 3 ? 'strengthening core backend & AI integration' : 'depth and testing'} in the short term.`
+            ...projEval.feedback.slice(0, 2),
+            `Recommendation: focus on ${skillOverlap.length < 3 ? "strengthening core backend & AI integration" : "depth and testing"} in the short term.`,
         ];
         return {
             cv: {
@@ -65,7 +86,7 @@ let PipelineService = class PipelineService {
             },
             overall: {
                 summary,
-            }
+            },
         };
     }
 };

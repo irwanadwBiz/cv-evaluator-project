@@ -1,13 +1,16 @@
-import { FilesService } from '@/files/files.service';
-import { RagService } from './rag.service';
-import { LlmService } from './llm.service';
-import { CVScores, ProjectScores } from './scoring';
+import { FilesService } from "@/files/files.service";
+import { RagService } from "./rag.service";
+import { LlmService } from "./llm.service";
+import { CVScores, ProjectScores } from "./scoring";
 export declare class PipelineService {
     private files;
     private rag;
     private llm;
     constructor(files: FilesService, rag: RagService, llm: LlmService);
-    run(cvId: string, reportId: string, temperature?: number): Promise<{
+    run(cvId: string, reportId: string, temperature: number, context?: {
+        cvContext?: string;
+        projectContext?: string;
+    }): Promise<{
         cv: {
             extracted: {
                 skills: string[];
