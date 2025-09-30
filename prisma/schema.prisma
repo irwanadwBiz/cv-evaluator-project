@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Upload {
+  id           String      @id @default(cuid())
+  type         UploadType
+  originalName String
+  mimeType     String
+  path         String
+  size         Int
+  text         String?
+  createdAt    DateTime    @default(now())
+
+  // Back-relations ke Job
+  cvJobs       Job[]       @relation("Job_cv")
+  reportJobs   Job[]       @relation("Job_report")
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum UploadType {
+  CV
+  REPORT
+  OTHER
+}
+
+model Job {
+  id          String     @id @default(cuid())
+  status      JobStatus  @default(queued)
+  retries     Int        @default(0)
+  error       String?
+  result      Json?
+  cvId        String
+  reportId    String
+  temperature Float      @default(0.2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  cv          Upload     @relation("Job_cv",     fields: [cvId],     references: [id], onDelete: Restrict, onUpdate: Cascade)
+  report      Upload     @relation("Job_report", fields: [reportId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([status, createdAt])
+}
+
+enum JobStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
+model VectorDoc {
+  id        String   @id @default(cuid())
+  kind      String
+  title     String
+  content   String
+  embedding Json
+  createdAt DateTime @default(now())
+
+  @@index([kind])
+}

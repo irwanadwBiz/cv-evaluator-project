@@ -1,0 +1,39 @@
+Project: Mini Project - Backend (NestJS) Evaluation Pipeline
+
+Goal
+Design and implement an async evaluation pipeline that scores a candidate using CV + Project Report.
+
+Architecture
+- Upload: /files/upload accepts .txt/.pdf/.docx for CV and REPORT.
+- Orchestration: enqueue job -> queued -> processing -> completed.
+- Pipeline:
+  1) Prompt: build a deterministic prompt to extract skills, years, and achievements from CV text.
+  2) Prompt chaining / chain: compare extracted CV against a job description retrieved via RAG.
+  3) RAG / retrieval: use a tiny vector store for job & rubric contexts.
+  4) Error handling: add retry with exponential backoff for transient fail/timeout cases.
+  5) Aggregation: compute weighted project and CV scores; produce an overall summary.
+
+Implementation Notes
+- retry/backoff: jittered exponential backoff; MAX_RETRIES configurable.
+- docs/documentation: README explains setup, design choices, and endpoints.
+- tests/jest: unit tests recommended for scoring helpers and services.
+- auth (optional): basic token can guard evaluate endpoints.
+- dashboard (optional): small page to poll job status.
+- deploy/docker: containerize app and run with Postgres.
+- monitoring: basic health endpoint and logs for job lifecycle.
+
+Result Format
+- Flat JSON fields:
+  • cv_match_rate (0–1)
+  • cv_feedback
+  • project_score (2–10 scale)
+  • project_feedback
+  • overall_summary
+
+Trade-offs
+- Mock LLM ensures deterministic behavior offline; can be swapped for real OpenAI later.
+- Simple vector embeddings keep RAG lightweight for the assignment.
+
+Conclusion
+Meets prompt chaining requirements with RAG and robust retry/backoff.
+Documentation provided; next steps are deeper AI integration and broader tests.
