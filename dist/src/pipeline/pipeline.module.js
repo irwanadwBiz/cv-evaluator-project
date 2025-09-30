@@ -13,12 +13,13 @@ const rag_service_1 = require("./rag.service");
 const llm_service_1 = require("./llm.service");
 const prisma_module_1 = require("../prisma/prisma.module");
 const files_module_1 = require("../files/files.module");
+const config_1 = require("@nestjs/config");
 let PipelineModule = class PipelineModule {
 };
 exports.PipelineModule = PipelineModule;
 exports.PipelineModule = PipelineModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, files_module_1.FilesModule],
+        imports: [prisma_module_1.PrismaModule, files_module_1.FilesModule, config_1.ConfigModule],
         providers: [pipeline_service_1.PipelineService, rag_service_1.RagService, llm_service_1.LlmService],
         exports: [pipeline_service_1.PipelineService],
     })

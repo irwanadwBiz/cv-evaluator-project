@@ -14,9 +14,9 @@ export declare class JobsService implements OnModuleInit {
     private startLoop;
     enqueue(cvId: string, reportId: string, temperature?: number): Promise<{
         error: string | null;
-        result: import("@prisma/client/runtime/library").JsonValue | null;
         id: string;
         createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.JobStatus;
         retries: number;
         temperature: number;
@@ -26,9 +26,9 @@ export declare class JobsService implements OnModuleInit {
     }>;
     find(id: string): Promise<{
         error: string | null;
-        result: import("@prisma/client/runtime/library").JsonValue | null;
         id: string;
         createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
         status: import(".prisma/client").$Enums.JobStatus;
         retries: number;
         temperature: number;

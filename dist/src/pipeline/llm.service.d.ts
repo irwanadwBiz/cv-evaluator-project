@@ -1,3 +1,4 @@
+import { ConfigService } from "@nestjs/config";
 type ExtractedCV = {
     skills: string[];
     years: number;
@@ -6,15 +7,17 @@ type ExtractedCV = {
     softSkills: string[];
 };
 export declare class LlmService {
-    private failRate;
-    private temperature;
-    private maybeFail;
+    private configService;
+    private readonly logger;
+    private openai;
+    private model;
+    constructor(configService: ConfigService);
     extractFromCV(cvText: string): Promise<ExtractedCV>;
-    compareToJob(cv: ExtractedCV, jobCtx: string): Promise<{
+    compareToJob(cv: ExtractedCV, jobContext: string): Promise<{
         analysis: string;
         skillOverlap: string[];
     }>;
-    evaluateProject(reportText: string, rubricCtx: string): Promise<{
+    evaluateProject(reportText: string, rubricContext: string): Promise<{
         scores: Record<string, number>;
         feedback: string[];
     }>;

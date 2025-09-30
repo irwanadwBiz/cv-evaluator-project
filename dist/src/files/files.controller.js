@@ -41,9 +41,28 @@ __decorate([
             destination: "./uploads",
             filename: (req, file, cb) => {
                 const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+                const ext = (0, path_1.extname)(file.originalname);
+                const name = file.originalname.split(".")[0];
                 cb(null, unique + (0, path_1.extname)(file.originalname));
             },
         }),
+        limits: {
+            fileSize: 10 * 1024 * 1024,
+        },
+        fileFilter: (req, file, cb) => {
+            const allowedMimes = [
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "text/plain",
+            ];
+            if (allowedMimes.includes(file.mimetype)) {
+                cb(null, true);
+            }
+            else {
+                cb(new common_1.BadRequestException("Invalid file type. Only PDF, DOC, DOCX, TXT allowed"), false);
+            }
+        },
     })),
     (0, swagger_1.ApiOperation)({ summary: "Upload a file (CV, REPORT, OTHER)" }),
     (0, swagger_1.ApiConsumes)("multipart/form-data"),
