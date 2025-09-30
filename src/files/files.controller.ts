@@ -31,9 +31,33 @@ export class FilesController {
         destination: "./uploads",
         filename: (req, file, cb) => {
           const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          const name = file.originalname.split(".")[0];
           cb(null, unique + extname(file.originalname));
         },
       }),
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+      fileFilter: (req, file, cb) => {
+        // Validasi file type
+        const allowedMimes = [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "text/plain",
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              "Invalid file type. Only PDF, DOC, DOCX, TXT allowed"
+            ),
+            false
+          );
+        }
+      },
     })
   )
   @ApiOperation({ summary: "Upload a file (CV, REPORT, OTHER)" })
